@@ -1,0 +1,123 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Newsletter</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-8">
+                <h1 class="text-center mb-4">Newsletter</h1>
+                <form id="subscribe-form" class="mb-4">
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" class="form-control" id="email" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Subscribe</button>
+                </form>
+                <form id="unsubscribe-form" class="mb-4">
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" class="form-control" id="unsub-email" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Unsubscribe</button>
+                </form>
+                <h2>Subscribers</h2>
+                <table id="subscribers" class="table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <form id="send-newsletter-form" class="mb-4">
+                    <div class="form-group">
+                        <label for="subject">Subject:</label>
+                        <input type="text" class="form-control" id="subject" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="body">Body:</label>
+                        <textarea class="form-control" id="body" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Newsletter</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.16.0/dist/umd/popper.min.js" integrity="sha384-QDzjwY8nGZsTgTfT6RcWiaKQ9v9X3sMyxFmhxoYlF0pIHJh0lmdgxdR2z2Kv9X9s" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
+    <script>
+        const subscribeForm = document.getElementById("subscribe-form");
+        const unsubscribeForm = document.getElementById("unsubscribe-form");
+        const subscribersTable = document.getElementById("subscribers");
+        const sendNewsletterForm = document.getElementById("send-newsletter-form");
+
+        async function getSubscribers() {
+            const response = await fetch("/api/newsletter");
+            const subscribers = await response.json();
+            return subscribers;
+        }
+
+        function renderSubscribers(subscribers) {
+            const tbody = subscribersTable.querySelector("tbody");
+            tbody.innerHTML = "";
+            subscribers.forEach(subscriber => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${subscriber.email}</td>
+                    <td>
+                        <button class="delete btn btn-danger" data-id="${subscriber.id}">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function refreshSubscribers() {
+            const subscribers = await getSubscribers();
+            renderSubscribers(subscribers);
+        }
+
+        subscribeForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            const email = document.getElementById("email").value;
+            await fetch("/api/newsletter", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email })
+            });
+            refreshSubscribers();
+        });
+
+        unsubscribeForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            const email = document.getElementById("unsub-email").value;
+            await fetch(`/api/newsletter/unsubscribe/${email}`, { method: "DELETE" });
+            refreshSubscribers();
+        });
+
+        subscribersTable.addEventListener("click", async event => {
+            if (event.target.classList.contains("delete")) {
+                const subscriberId = event.target.dataset.id;
+                await fetch(`/api/newsletter/${subscriberId}`, { method: "DELETE" });
+                refreshSubscribers();
+            }
+        });
+
+        sendNewsletterForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            const subject = document.getElementById("subject").value;
+            const body = document.getElementById("body").value;
+            await fetch("/api/newsletter/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ subject, body })
+            });
+        });
+
+        refreshSubscribers();
+    </script>
